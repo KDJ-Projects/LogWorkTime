@@ -5,7 +5,7 @@
 //  Created by Kurt De Jonghe on 30/12/2025.
 //
 
-import SwiftUI
+internal import SwiftUI
 
 @main
 struct LogWorkTimeApp: App {
