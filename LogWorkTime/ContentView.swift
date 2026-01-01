@@ -10,11 +10,12 @@ internal import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = WorkHourViewModel()
     @State private var editingWorkHour: WorkHour? = nil
-    @State private var newEndTime: Date = Date()
     
     @State private var startDate: Date = Date()
     @State private var startTime: Date = Date()
     @State private var endTime: Date = Date()
+    @State private var newEndTime: Date = Date()
+    @State private var newStartTime: Date = Date()
     
     @State private var breakTime: Double = 0.50
 
@@ -123,11 +124,22 @@ struct ContentView: View {
             .sheet(item: $editingWorkHour) { workHour in
                 NavigationView {
                     VStack(spacing: 16) {
+                        Text("Bewerk begintijd")
+                            .font(.headline)
+                        
+                        DatePicker("Begin", selection: $newStartTime, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(.wheel)
+                            .labelsHidden()
+                        
+                        Spacer()
+                        
                         Text("Bewerk eindtijd")
                             .font(.headline)
+                        
                         DatePicker("Einde", selection: $newEndTime, displayedComponents: .hourAndMinute)
                             .datePickerStyle(.wheel)
                             .labelsHidden()
+                        
                         Spacer()
                     }
                     .padding()
@@ -142,19 +154,34 @@ struct ContentView: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Bewaar") {
                                 if let index = viewModel.workHours.firstIndex(where: { $0.id == workHour.id }) {
-                                    // Ensure new end time is after start time; if not, adjust date component to same day as start.
+                                    
+                                    // Current calendar
                                     let calendar = Calendar.current
-                                    let start = viewModel.workHours[index].startTime
-                                    var comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: newEndTime)
-                                    let startComps = calendar.dateComponents([.year, .month, .day], from: start)
-                                    comps.year = startComps.year
-                                    comps.month = startComps.month
-                                    comps.day = startComps.day
-                                    let adjustedEnd = calendar.date(from: comps) ?? newEndTime
-                                    if adjustedEnd > start {
+                                    
+                                    // Current start and end time
+                                    let currentStartTime = viewModel.workHours[index].startTime
+                                    let currentEndTime = viewModel.workHours[index].endTime
+                                    
+                                    // Adjusting newStartTime
+                                    var startDateComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: currentStartTime)
+                                    
+                                    let adjustedStart = calendar.date(bySettingHour: calendar.component(.hour, from: newStartTime), minute: calendar.component(.minute, from: newStartTime), second: 0, of: calendar.date(from: startDateComponents)!)!
+                                    
+                                    // Ensure the endtime gets adjusted
+                                    var newEndComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: newEndTime)
+                                    newEndComponents.year = startDateComponents.year
+                                    newEndComponents.month = startDateComponents.month
+                                    newEndComponents.day = startDateComponents.day
+                                    let adjustedEnd = calendar.date(from: newEndComponents) ?? newEndTime
+                                    
+                                    // Check if ent time is greater than start time
+                                    if adjustedEnd > adjustedStart {
+                                        viewModel.workHours[index].startTime = adjustedStart
                                         viewModel.workHours[index].endTime = adjustedEnd
                                         viewModel.saveWorkHours()
                                         editingWorkHour = nil
+                                    } else {
+                                        print("De eindtijd moet na de begintijd zijn!")
                                     }
                                 }
                             }
